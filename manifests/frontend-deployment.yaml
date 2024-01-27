@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: cloudchamp
+  labels:
+    role: frontend
+    env: demo
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 25%
+  selector:
+    matchLabels:
+      role: frontend
+  template:
+    metadata:
+      labels:
+        role: frontend
+    spec:
+      initContainers:
+      - name: init-api-host
+        image: your-image-with-kubectl
+        command: ["/bin/sh", "-c"]
+        args:
+        - |
+          export REACT_APP_APIHOSTPORT=$(kubectl get svc api -n cloudchamp -o=jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+          echo "REACT_APP_APIHOSTPORT=$REACT_APP_APIHOSTPORT" >> /etc/environment
+        env:
+        - name: KUBECONFIG
+          value: /kube/config
+        volumeMounts:
+        - name: kubeconfig
+          mountPath: /kube/config
+      containers:
+      - name: frontend
+        image: cloudacademydevops/frontend:v11
+        imagePullPolicy: Always
+        env:
+          - name: REACT_APP_APIHOSTPORT
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.annotations['kubectl.kubernetes.io/last-applied-configuration']
+        ports:
+        - containerPort: 8080
+        livenessProbe:
+          httpGet:
+            path: /ok
+            port: 8080
+          initialDelaySeconds: 2
+          periodSeconds: 5
+        readinessProbe:
+          httpGet:
+             path: /ok
+             port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          successThreshold: 1
+      volumes:
+      - name: kubeconfig
+        secret:
+          secretName: your-kubeconfig-secret
