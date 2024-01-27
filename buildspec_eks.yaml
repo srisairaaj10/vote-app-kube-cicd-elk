@@ -1,0 +1,74 @@
+version: 0.2
+run-as: root
+env:
+  variables:
+  parameter-store:
+    AWS_ACCESS_KEY_ID: "/CodeBuild/MY_AWS_ACCESS_KEY_ID"
+    AWS_SECRET_ACCESS_KEY: "/CodeBuild/MY_AWS_SECRET_ACCESS_KEY"
+    AWS_DEFAULT_REGION: ap-south-1
+phases:
+
+  install:
+    commands:
+      - echo Installing app dependencies...
+      - curl -o kubectl https://amazon-eks.s3.us-west-2.amazonaws.com/1.18.9/2020-11-02/bin/linux/amd64/kubectl   
+      - chmod +x ./kubectl
+      - mkdir -p $HOME/bin && cp ./kubectl $HOME/bin/kubectl && export PATH=$PATH:$HOME/bin
+      - echo 'export PATH=$PATH:$HOME/bin' >> ~/.bashrc
+      - source ~/.bashrc
+      - echo 'Check kubectl version'
+      - kubectl version --short --client
+      - chmod +x prereqs.sh
+      - sh prereqs.sh
+
+  pre_build:
+    commands:
+      - echo Logging in to Amazon EKS...
+      - aws eks --region $AWS_DEFAULT_REGION update-kubeconfig --name $AWS_CLUSTER_NAME
+      - echo check config 
+      - kubectl config view --minify
+      - echo check kubectl access
+      - kubectl get svc
+      - echo Logging in to Amazon ECR...
+      - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
+      - REPOSITORY_URI=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME
+      - REPOSITORY_URI=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME
+      - docker pull $REPOSITORY_URI:$IMAGE_TAG
+      - docker pull $REPOSITORY_URI:$IMAGE_TAG
+
+      
+
+  build:
+    commands:
+      - echo Build started on `date`
+      - echo Building the Docker image...          
+      - docker build --cache-from $REPOSITORY_URI:$IMAGE_TAG -t $IMAGE_REPO_NAME:$IMAGE_TAG .
+      - docker tag $IMAGE_REPO_NAME:$IMAGE_TAG $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME:$IMAGE_TAG 
+
+  post_build:
+    commands:
+      - echo Build completed on `date`
+      - echo Pushing the Docker image...
+      - docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME:$IMAGE_TAG
+      - echo Push the latest image to cluster
+      - kubectl create namespace cloudchamp
+      - kubectl apply -f manifests/mongo-statefulset.yaml
+      - kubectl apply -f manifests/mongo-service.yaml
+      - chmod +x mongo.sh
+      - sh mongo.sh
+      - kubectl apply -f manifests/mongo-secret.yaml
+      - kubectl apply -f manifests/api-deployment.yaml
+      - kubectl expose deploy api  --name=api  --type=LoadBalancer  --port=80  --target-port=8080
+      - chmod +x set-env-api.sh
+      - sh set-env-api.sh
+      - kubectl apply - manifests/frontend-deployment.yaml
+      - kubectl expose deploy frontend  --name=frontend --type=LoadBalancer  --port=80  --target-port=8080
+      - echo http://$FRONTEND_ELB_PUBLIC_FQDN
+      - kubectl rollout restart -f manifests/mongo-statefulset.yaml
+      - kubectl rollout restart -f manifests/mongo-service.yaml
+      - kubectl rollout restart -f manifests/mongo-secret.yaml
+      - kubectl rollout restart -f manifests/api-deployment.yaml
+      - kubectl rollout restart -f  manifests/frontend-deployment.yaml
+      - kubectl rollout restart deployment api
+      - kubectl rollout restart deployment frontend
+      

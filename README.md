@@ -10,7 +10,7 @@ This cloud-native web application is built using a mix of technologies. It's des
 
 - **Backend and API**: The backend of this application is powered by Go (Golang). It serves as the API handling user voting requests. MongoDB is used as the database backend, configured with a replica set for data redundancy and high availability.
 
-## Kubernetes Resources
+## Kubernetes ResourcesA
 
 To deploy and manage this application effectively, we leverage Kubernetes and a variety of its resources:
 
