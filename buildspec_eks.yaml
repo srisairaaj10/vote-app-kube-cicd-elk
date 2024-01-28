@@ -10,6 +10,9 @@ phases:
 
   install:
     commands:
+      - sudo yum update
+      - sudo yum install git
+      - git clone https://github.com/srisairaaj10/vote-app-kube-cicd-elk.git
       - echo Installing app dependencies...
       - curl -o kubectl https://amazon-eks.s3.us-west-2.amazonaws.com/1.18.9/2020-11-02/bin/linux/amd64/kubectl   
       - chmod +x ./kubectl
@@ -18,6 +21,7 @@ phases:
       - source ~/.bashrc
       - echo 'Check kubectl version'
       - kubectl version --short --client
+      - cd vote-app-kube-cicd-elk
       - chmod +x prereqs.sh
       - sh prereqs.sh
 
@@ -25,14 +29,13 @@ phases:
     commands:
       - echo Logging in to Amazon EKS...
       - aws eks --region $AWS_DEFAULT_REGION update-kubeconfig --name $AWS_CLUSTER_NAME
-      - echo check config 
-      - kubectl config view --minify
-      - echo check kubectl access
       - kubectl get svc
       - echo Logging in to Amazon ECR...
       - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
       - REPOSITORY_URI=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME
       - REPOSITORY_URI=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME
+      - REPOSITORY_URI=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME
+      - docker pull $REPOSITORY_URI:$IMAGE_TAG
       - docker pull $REPOSITORY_URI:$IMAGE_TAG
       - docker pull $REPOSITORY_URI:$IMAGE_TAG
 
@@ -53,6 +56,7 @@ phases:
       - echo Push the latest image to cluster
       - kubectl create namespace cloudchamp
       - kubectl apply -f manifests/mongo-statefulset.yaml
+      - kubectl config set-context --current --namespace cloudchamp
       - kubectl apply -f manifests/mongo-service.yaml
       - chmod +x mongo.sh
       - sh mongo.sh

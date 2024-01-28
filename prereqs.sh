@@ -41,34 +41,16 @@ else
 fi
 
 # eksctl
-if ! type eksctl >/dev/null 2>&1; then
-	curl --silent --location "https://github.com/weaveworks/eksctl/releases/download/latest_release/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C /tmp
-	mv /tmp/eksctl $HOME/bin
-	echo 'eksctl installed'
-else
-	echo 'eksctl already installed'
-fi
-
-# kubectx/kubens
-if ! type kubectx >/dev/null 2>&1; then
-	git clone https://github.com/ahmetb/kubectx /opt/kubectx
-	ln -s /opt/kubectx/kubectx /usr/local/bin/kubectx
-	ln -s /opt/kubectx/kubens /usr/local/bin/kubens
-	echo 'kubectx installed'
-else
-	echo 'kubectx already installed'
-fi
-
+curl --silent --location "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C /tmp
+sudo mv /tmp/eksctl /usr/local/bin
+eksctl version
 # Test if AWS credentials exist
 aws sts get-caller-identity
 
 #git clone repo
-git clone https://github.com/N4si/K8s-voting-app.git
-cd K8s-voting-app
+git clone https://github.com/srisairaaj10/vote-app-kube-cicd-elk.git
+cd vote-app-kube-cicd-elk
 ls
 aws eks update-kubeconfig --name cluster1 --region us-east-1
 #create namespace
-kubectl create ns cloudchamp
-
-kubectl config set-context --current --namespace cloudchamp
 
