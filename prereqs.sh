@@ -66,7 +66,7 @@ aws sts get-caller-identity
 git clone https://github.com/N4si/K8s-voting-app.git
 cd K8s-voting-app
 ls
-aws eks update-kubeconfig --name cluster1 --region ap-south-1
+aws eks update-kubeconfig --name cluster1 --region us-east-1
 #create namespace
 kubectl create ns cloudchamp
 
